@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Study Assistant</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- Particle canvas for confetti (pointer-events disabled in CSS) -->
+  <canvas id="cfx"></canvas>
+
+  <div class="app">
+
+    <!-- ── Header ─────────────────────────────────────────────────────── -->
+    <header>
+      <div class="logo">
+        <div class="logo-icon">📚</div>
+        <div>
+          <h1>Smart Study Assistant</h1>
+          <p>Rule-based priority engine</p>
+        </div>
+      </div>
+
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input class="search-input" id="search-input"
+               type="text" placeholder="Search tasks… (F)" autocomplete="off" />
+        <button class="search-clear" id="search-clear" aria-label="Clear search">✕</button>
+      </div>
+
+      <button class="hdr-btn" id="btn-export" title="Download tasks as JSON">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Export
+      </button>
+
+      <button class="btn-add" id="btn-add">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Add Task
+      </button>
+    </header>
+
+    <!-- ── Progress bar ──────────────────────────────────────────────── -->
+    <div class="progress-section">
+      <div class="progress-info">
+        <span>Overall Progress</span>
+        <span id="prog-txt">0 / 0 tasks complete</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="prog-fill"></div>
+      </div>
+    </div>
+
+    <!-- ── Dashboard ─────────────────────────────────────────────────── -->
+    <div class="dashboard">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-lbl">Active</div>
+          <div class="stat-val c-acc"  id="s-total">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">High</div>
+          <div class="stat-val c-high" id="s-high">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Medium</div>
+          <div class="stat-val c-med"  id="s-med">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Done</div>
+          <div class="stat-val c-done" id="s-done">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">🔥 Streak</div>
+          <div class="stat-val c-fire" id="s-streak">0</div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <svg id="donut" viewBox="0 0 120 120" width="88" height="88"
+             role="img" aria-label="Priority distribution chart">
+          <circle cx="60" cy="60" r="40" fill="none"
+                  stroke="rgba(255,255,255,.05)" stroke-width="20"/>
+          <text x="60" y="65" text-anchor="middle" fill="#a7a9be" font-size="11">No tasks</text>
+        </svg>
+        <div class="chart-legend">
+          <div class="leg"><div class="leg-dot high"></div>High</div>
+          <div class="leg"><div class="leg-dot med"></div>Medium</div>
+          <div class="leg"><div class="leg-dot low"></div>Low</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Urgent tasks banner (shown conditionally by JS) ───────────── -->
+    <div id="urgent" class="urgent-banner" hidden>
+      <span class="urgent-title">⚠️ Due Very Soon</span>
+      <div class="urgent-chips" id="uchips"></div>
+    </div>
+
+    <!-- ── Filter tabs + sort ─────────────────────────────────────────── -->
+    <div class="controls-row">
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-filter="active">Active</button>
+        <button class="tab" data-filter="high">🔴 High</button>
+        <button class="tab" data-filter="med">🟡 Med</button>
+        <button class="tab" data-filter="low">🟢 Low</button>
+        <button class="tab" data-filter="done">✅ Done</button>
+        <button class="tab" data-filter="all">All</button>
+      </div>
+      <select class="sort-sel" id="sort-sel" aria-label="Sort tasks by">
+        <option value="priority">↓ Priority</option>
+        <option value="deadline">↑ Deadline</option>
+        <option value="importance">↓ Importance</option>
+        <option value="difficulty">↓ Difficulty</option>
+        <option value="name">A–Z Name</option>
+      </select>
+    </div>
+
+    <!-- ── Task list ──────────────────────────────────────────────────── -->
+    <div id="task-list" role="list"></div>
+
+    <!-- ── Keyboard shortcut hint ─────────────────────────────────────── -->
+    <p class="kb-hint">
+      <kbd>N</kbd> new task &nbsp;·&nbsp;
+      <kbd>F</kbd> search &nbsp;·&nbsp;
+      <kbd>Space</kbd> pause timer &nbsp;·&nbsp;
+      <kbd>Esc</kbd> close
+    </p>
+
+  </div><!-- /.app -->
+
+  <!-- ── Pomodoro timer bar (slides up from bottom) ─────────────────── -->
+  <div class="timer-bar" id="timer-bar" aria-live="polite">
+    <div class="timer-info">
+      <div class="tmode-badge work" id="t-mode-badge">Focus</div>
+      <div class="timer-task-name" id="t-task-name">—</div>
+      <div class="timer-pomos"     id="t-pomos"></div>
+    </div>
+
+    <div class="timer-svg-wrap">
+      <svg viewBox="0 0 80 80" width="78" height="78" aria-hidden="true">
+        <circle cx="40" cy="40" r="32" fill="none"
+                stroke="rgba(255,255,255,.07)" stroke-width="6"/>
+        <circle id="t-circle" cx="40" cy="40" r="32" fill="none"
+                stroke="var(--acc2)" stroke-width="6" stroke-linecap="round"
+                stroke-dasharray="201.06" stroke-dashoffset="0"
+                transform="rotate(-90 40 40)"/>
+      </svg>
+      <div class="timer-center">
+        <span id="t-time">25:00</span>
+        <span id="t-lbl">FOCUS</span>
+      </div>
+    </div>
+
+    <div class="timer-btns">
+      <button class="tbtn primary" id="t-pause-btn" title="Pause / Resume">⏸</button>
+      <button class="tbtn"         id="t-skip-btn"  title="Skip to next phase">⏭</button>
+      <button class="tbtn"         id="t-stop-btn"  title="Stop timer">■</button>
+    </div>
+  </div>
+
+  <!-- ── Add / Edit modal ───────────────────────────────────────────── -->
+  <div class="overlay" id="overlay" role="dialog"
+       aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <div class="modal-hdr">
+        <span class="modal-title" id="modal-title">New Task</span>
+        <button class="x-btn" id="modal-close" aria-label="Close">✕</button>
+      </div>
+
+      <div class="fg">
+        <label for="inp-name">Task Name</label>
+        <input type="text" id="inp-name"
+               placeholder="e.g. Revise Chapter 4" maxlength="80" />
+      </div>
+
+      <div class="fg">
+        <label for="inp-dl">Deadline <span>(days from today · 1–30)</span></label>
+        <input type="number" id="inp-dl" min="1" max="30" value="7" />
+      </div>
+
+      <div class="fg">
+        <label for="inp-dif">Difficulty <span>(1 = easy · 10 = very hard)</span></label>
+        <div class="slider-row">
+          <input type="range" id="inp-dif" min="1" max="10" value="5" />
+          <span class="sval" id="v-dif" aria-live="polite">5</span>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label for="inp-imp">Importance <span>(1 = minor · 10 = critical)</span></label>
+        <div class="slider-row">
+          <input type="range" id="inp-imp" min="1" max="10" value="5" />
+          <span class="sval" id="v-imp" aria-live="polite">5</span>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label for="inp-notes">Notes <span>(optional)</span></label>
+        <textarea id="inp-notes" placeholder="Extra details, links, reminders…"></textarea>
+      </div>
+
+      <div class="score-preview">
+        <div>
+          <div class="sp-lbl">Priority Score Preview</div>
+          <div class="sp-form">(importance×3) + (difficulty×2) + (10−deadline)</div>
+        </div>
+        <span class="sp-val" id="sp-val" aria-live="polite">—</span>
+      </div>
+
+      <button class="sub-btn" id="sub-btn">
+        <span id="sub-txt">Add Task</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Toast notifications ────────────────────────────────────────── -->
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <!-- Entry point — ES module, deferred by default -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

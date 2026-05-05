@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smart Study Assistant</title>
+<style>
+/* ── Reset & variables ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #0f0e17;
+  --sur:      #1a1827;
+  --sur2:     #221f35;
+  --sur3:     #2a2740;
+  --bdr:      rgba(255,255,255,0.07);
+  --bdr2:     rgba(255,255,255,0.13);
+  --txt:      #fffffe;
+  --muted:    #a7a9be;
+  --acc:      #7c3aed;
+  --acc2:     #a855f7;
+  --high:     #ef4444;
+  --high-bg:  rgba(239,68,68,0.12);
+  --med:      #f59e0b;
+  --med-bg:   rgba(245,158,11,0.12);
+  --low:      #10b981;
+  --low-bg:   rgba(16,185,129,0.12);
+  --blue:     #60a5fa;
+  --blue-bg:  rgba(96,165,250,0.12);
+  --r:        14px;
+  --sh:       0 8px 32px rgba(0,0,0,0.4);
+  --sh2:      0 24px 64px rgba(0,0,0,0.6);
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg); color: var(--txt);
+  min-height: 100vh; overflow-x: hidden;
+}
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(124,58,237,.2) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(168,85,247,.13) 0%, transparent 60%);
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.app { max-width: 1020px; margin: 0 auto; padding: 1.75rem 1.25rem 8rem; }
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+header {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center; gap: .75rem;
+  margin-bottom: 1.4rem;
+}
+.logo { display: flex; align-items: center; gap: .65rem; }
+.logo-icon {
+  width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--acc), var(--acc2));
+  display: grid; place-items: center; font-size: 1.4rem;
+  box-shadow: 0 4px 20px rgba(124,58,237,.5);
+}
+.logo h1 { font-size: 1.2rem; font-weight: 700; white-space: nowrap; }
+.logo p  { font-size: .71rem; color: var(--muted); }
+
+/* Search */
+.search-wrap { position: relative; max-width: 380px; width: 100%; }
+.search-wrap svg { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-input {
+  width: 100%; padding: .62rem .9rem .62rem 2.25rem;
+  border-radius: 10px; border: 1px solid var(--bdr);
+  background: var(--sur); color: var(--txt); font-size: .87rem;
+  outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.search-input:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(124,58,237,.2); }
+.search-input::placeholder { color: var(--muted); }
+.search-clear {
+  position: absolute; right: .6rem; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-size: .85rem; padding: .2rem; display: none;
+}
+.search-clear.show { display: block; }
+
+/* Header action buttons */
+.hdr-btn {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .6rem .95rem; border: 1px solid var(--bdr);
+  border-radius: 10px; background: var(--sur);
+  color: var(--muted); font-size: .82rem;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.hdr-btn:hover { border-color: var(--acc); color: var(--acc2); background: rgba(124,58,237,.08); }
+.btn-add {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .62rem 1.1rem; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, var(--acc), var(--acc2));
+  color: #fff; font-size: .87rem; font-weight: 600;
+  cursor: pointer; transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 4px 16px rgba(124,58,237,.4); white-space: nowrap;
+}
+.btn-add:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,58,237,.55); }
+.btn-add:active { transform: translateY(0); }
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.progress-section { margin-bottom: 1.4rem; }
+.progress-info { display: flex; justify-content: space-between; font-size: .76rem; color: var(--muted); margin-bottom: .4rem; }
+.progress-track { height: 7px; background: var(--sur2); border-radius: 7px; overflow: hidden; }
+.progress-fill {
+  height: 100%; border-radius: 7px; width: 0%;
+  background: linear-gradient(90deg, var(--acc), var(--acc2));
+  transition: width .7s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── Dashboard ───────────────────────────────────────────────────────────── */
+.dashboard { display: flex; gap: .9rem; margin-bottom: 1.3rem; flex-wrap: wrap; }
+.stats { display: flex; gap: .75rem; flex: 1; flex-wrap: wrap; min-width: 0; }
+.stat-card {
+  flex: 1; min-width: 90px; background: var(--sur);
+  border: 1px solid var(--bdr); border-radius: var(--r);
+  padding: .85rem 1rem; transition: transform .2s; cursor: default;
+}
+.stat-card:hover { transform: translateY(-3px); }
+.stat-lbl { font-size: .67rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .2rem; }
+.stat-val { font-size: 1.85rem; font-weight: 800; line-height: 1; }
+.stat-val.c-acc   { color: var(--acc2); }
+.stat-val.c-high  { color: var(--high); }
+.stat-val.c-med   { color: var(--med); }
+.stat-val.c-done  { color: var(--low); }
+.stat-val.c-fire  { color: #f97316; }
+
+/* Donut chart */
+.chart-card {
+  background: var(--sur); border: 1px solid var(--bdr); border-radius: var(--r);
+  padding: .9rem 1rem; display: flex; align-items: center; gap: .9rem; flex-shrink: 0;
+}
+.chart-legend { display: flex; flex-direction: column; gap: .4rem; }
+.leg { display: flex; align-items: center; gap: .45rem; font-size: .74rem; color: var(--muted); }
+.leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Urgent banner ───────────────────────────────────────────────────────── */
+.urgent-banner {
+  background: rgba(239,68,68,.09); border: 1px solid rgba(239,68,68,.25);
+  border-radius: var(--r); padding: .7rem 1rem;
+  margin-bottom: 1.2rem; display: flex; align-items: center; gap: .65rem; flex-wrap: wrap;
+}
+.urgent-title { font-size: .83rem; font-weight: 700; color: var(--high); white-space: nowrap; }
+.urgent-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.uchip {
+  padding: .22rem .65rem; border-radius: 50px;
+  background: rgba(239,68,68,.15); color: var(--high);
+  font-size: .73rem; font-weight: 600; border: 1px solid rgba(239,68,68,.3);
+}
+
+/* ── Controls ────────────────────────────────────────────────────────────── */
+.controls-row { display: flex; align-items: center; gap: .65rem; margin-bottom: .95rem; flex-wrap: wrap; }
+.tabs { display: flex; gap: .35rem; flex: 1; flex-wrap: wrap; }
+.tab {
+  padding: .38rem .85rem; border-radius: 50px; border: 1px solid var(--bdr);
+  background: transparent; color: var(--muted); font-size: .79rem;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.tab.active, .tab:hover { background: var(--acc); border-color: var(--acc); color: #fff; }
+.sort-sel {
+  padding: .38rem .7rem; border-radius: 8px; border: 1px solid var(--bdr);
+  background: var(--sur); color: var(--muted); font-size: .79rem;
+  cursor: pointer; outline: none; transition: border-color .15s;
+}
+.sort-sel:focus { border-color: var(--acc); }
+.sort-sel option { background: var(--sur2); }
+
+/* ── Task list ───────────────────────────────────────────────────────────── */
+#task-list { display: flex; flex-direction: column; gap: .7rem; }
+.empty-state { text-align: center; padding: 3.5rem 1rem; color: var(--muted); }
+.empty-icon { font-size: 3rem; margin-bottom: .7rem; opacity: .4; }
+.empty-state p { font-size: .95rem; }
+
+/* ── Task card ───────────────────────────────────────────────────────────── */
+.task-card {
+  background: var(--sur); border: 1px solid var(--bdr); border-radius: var(--r);
+  padding: .95rem 1.1rem;
+  display: grid;
+  grid-template-columns: 4px auto 1fr auto auto;
+  align-items: center; gap: .8rem;
+  transition: transform .2s, box-shadow .2s;
+  animation: slideIn .25s ease;
+  position: relative; overflow: hidden;
+}
+.task-card:hover { transform: translateY(-2px); box-shadow: var(--sh); }
+.task-card.done { opacity: .52; }
+
+/* Left accent strip */
+.strip { width: 4px; align-self: stretch; border-radius: 4px; flex-shrink: 0; }
+.task-card.high .strip { background: var(--high); box-shadow: 0 0 10px rgba(239,68,68,.5); }
+.task-card.med  .strip { background: var(--med);  box-shadow: 0 0 10px rgba(245,158,11,.5); }
+.task-card.low  .strip { background: var(--low);  box-shadow: 0 0 10px rgba(16,185,129,.5); }
+
+/* Rank badge */
+.rank {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: grid; place-items: center; font-size: .77rem; font-weight: 700; flex-shrink: 0;
+}
+.task-card.high .rank { background: var(--high-bg); color: var(--high); }
+.task-card.med  .rank { background: var(--med-bg);  color: var(--med);  }
+.task-card.low  .rank { background: var(--low-bg);  color: var(--low);  }
+
+/* Body */
+.task-body { min-width: 0; }
+.task-name {
+  font-size: .94rem; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: .22rem;
+}
+.task-card.done .task-name { text-decoration: line-through; color: var(--muted); }
+.task-meta { display: flex; flex-wrap: wrap; gap: .25rem .7rem; font-size: .73rem; color: var(--muted); margin-bottom: .25rem; }
+.task-notes {
+  font-size: .73rem; color: var(--muted); font-style: italic;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: .3rem;
+}
+.pbar-track { height: 3px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; }
+.pbar-fill  { height: 100%; border-radius: 3px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+.task-card.high .pbar-fill { background: var(--high); }
+.task-card.med  .pbar-fill { background: var(--med);  }
+.task-card.low  .pbar-fill { background: var(--low);  }
+
+/* Score badge */
+.score-badge { display: flex; flex-direction: column; align-items: center; gap: .1rem; flex-shrink: 0; min-width: 40px; }
+.score-num { font-size: 1.3rem; font-weight: 800; line-height: 1; }
+.task-card.high .score-num { color: var(--high); }
+.task-card.med  .score-num { color: var(--med);  }
+.task-card.low  .score-num { color: var(--low);  }
+.score-lbl { font-size: .59rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+
+/* Action buttons */
+.task-actions { display: flex; gap: .28rem; flex-shrink: 0; }
+.ibtn {
+  width: 31px; height: 31px; border-radius: 8px; border: 1px solid var(--bdr);
+  background: transparent; color: var(--muted); font-size: .82rem;
+  cursor: pointer; display: grid; place-items: center; transition: all .15s;
+}
+.ibtn:hover           { border-color: var(--acc);  color: var(--acc2); background: rgba(124,58,237,.1); }
+.ibtn.done-btn:hover  { border-color: var(--low);  color: var(--low);  background: var(--low-bg); }
+.ibtn.del-btn:hover   { border-color: var(--high); color: var(--high); background: var(--high-bg); }
+.ibtn.focus-btn:hover { border-color: var(--med);  color: var(--med);  background: var(--med-bg); }
+.ibtn.focus-on  { background: var(--med-bg);  color: var(--med);  border-color: var(--med); }
+.ibtn.ticked    { background: var(--low-bg);  color: var(--low);  border-color: var(--low); }
+
+/* IN FOCUS badge */
+.focus-badge {
+  position: absolute; top: .45rem; right: .45rem;
+  padding: .13rem .48rem; border-radius: 50px;
+  background: var(--med-bg); color: var(--med); border: 1px solid rgba(245,158,11,.3);
+  font-size: .62rem; font-weight: 700; letter-spacing: .04em;
+  animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.45} }
+@keyframes slideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* Section divider */
+.sec-lbl {
+  font-size: .69rem; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .07em;
+  display: flex; align-items: center; gap: .5rem;
+  margin-bottom: .55rem; margin-top: .1rem;
+}
+.sec-lbl::after { content:''; flex:1; height:1px; background: var(--bdr); }
+
+/* ── Pomodoro timer bar ───────────────────────────────────────────────────── */
+.timer-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
+  background: var(--sur2); border-top: 1px solid var(--bdr2);
+  padding: .7rem 1.5rem; display: flex; align-items: center; gap: 1.2rem;
+  transform: translateY(100%);
+  transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: 0 -8px 30px rgba(0,0,0,.45);
+}
+.timer-bar.up { transform: translateY(0); }
+.timer-info { flex: 1; min-width: 0; }
+.tmode-badge {
+  display: inline-block; padding: .14rem .58rem; border-radius: 50px;
+  font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: .22rem;
+}
+.tmode-badge.work  { background: rgba(124,58,237,.2); color: var(--acc2); }
+.tmode-badge.short { background: var(--low-bg);  color: var(--low); }
+.tmode-badge.long  { background: var(--blue-bg); color: var(--blue); }
+.timer-task-name { font-size: .88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.timer-pomos { font-size: .78rem; margin-top: .12rem; min-height: 1em; }
+
+/* SVG timer circle */
+.timer-svg-wrap { position: relative; flex-shrink: 0; }
+.timer-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; pointer-events: none;
+}
+#t-time { font-size: .9rem; font-weight: 800; line-height: 1; }
+#t-lbl  { font-size: .48rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+/* Timer buttons */
+.timer-btns { display: flex; gap: .45rem; align-items: center; }
+.tbtn {
+  width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--bdr);
+  background: var(--sur); color: var(--muted); font-size: .95rem;
+  cursor: pointer; display: grid; place-items: center; transition: all .15s;
+}
+.tbtn:hover { border-color: var(--acc); color: var(--acc2); background: rgba(124,58,237,.1); }
+.tbtn.primary {
+  background: linear-gradient(135deg, var(--acc), var(--acc2));
+  border-color: transparent; color: #fff;
+  box-shadow: 0 4px 14px rgba(124,58,237,.4);
+}
+.tbtn.primary:hover { transform: scale(1.06); }
+
+/* ── Modal ───────────────────────────────────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--sur2); border: 1px solid var(--bdr2); border-radius: 20px;
+  padding: 1.75rem; width: 100%; max-width: 490px; max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--sh2);
+  transform: scale(.93) translateY(12px);
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+}
+.modal::-webkit-scrollbar { width: 4px; }
+.modal::-webkit-scrollbar-thumb { background: var(--bdr2); border-radius: 4px; }
+.overlay.open .modal { transform: scale(1) translateY(0); }
+.modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.35rem; }
+.modal-title { font-size: 1.15rem; font-weight: 700; }
+.x-btn {
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--bdr);
+  background: transparent; color: var(--muted); font-size: 1rem;
+  cursor: pointer; display: grid; place-items: center; transition: all .15s;
+}
+.x-btn:hover { background: var(--high-bg); color: var(--high); border-color: var(--high); }
+
+/* Form */
+.fg { margin-bottom: 1.05rem; }
+label {
+  display: block; font-size: .75rem; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .04em; margin-bottom: .38rem;
+}
+label span { font-weight: 400; text-transform: none; letter-spacing: 0; }
+input[type="text"], input[type="number"], textarea {
+  width: 100%; padding: .65rem .9rem; border-radius: 10px;
+  border: 1px solid var(--bdr); background: var(--sur); color: var(--txt);
+  font-size: .9rem; outline: none; font-family: inherit;
+  transition: border-color .2s, box-shadow .2s;
+}
+textarea { resize: vertical; min-height: 68px; }
+input:focus, textarea:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(124,58,237,.2); }
+
+.slider-row { display: flex; align-items: center; gap: .8rem; }
+input[type="range"] {
+  flex: 1; -webkit-appearance: none; height: 5px; border-radius: 5px;
+  background: var(--sur); outline: none; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 17px; height: 17px; border-radius: 50%;
+  background: var(--acc2); box-shadow: 0 0 8px rgba(168,85,247,.6); transition: transform .1s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+.sval { min-width: 22px; text-align: center; font-size: .93rem; font-weight: 700; color: var(--acc2); }
+
+/* Score preview */
+.score-preview {
+  background: var(--sur); border: 1px solid var(--bdr); border-radius: 12px;
+  padding: .85rem 1.05rem; display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.1rem; gap: 1rem;
+}
+.sp-lbl   { font-size: .79rem; color: var(--muted); }
+.sp-form  { font-size: .67rem; color: var(--muted); opacity: .7; margin-top: 2px; }
+.sp-val   { font-size: 1.9rem; font-weight: 800; }
+
+.sub-btn {
+  width: 100%; padding: .76rem; border: none; border-radius: 12px;
+  background: linear-gradient(135deg, var(--acc), var(--acc2));
+  color: #fff; font-size: .95rem; font-weight: 700;
+  cursor: pointer; transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 4px 16px rgba(124,58,237,.4);
+}
+.sub-btn:hover { transform: translateY(-1px); box-shadow: 0 7px 24px rgba(124,58,237,.55); }
+
+/* ── Keyboard shortcut hint ───────────────────────────────────────────────── */
+.kb-hint { text-align: center; font-size: .7rem; color: var(--muted); margin-top: 1.5rem; opacity: .55; }
+.kb-hint kbd {
+  display: inline-block; padding: .05rem .35rem; border-radius: 4px;
+  border: 1px solid var(--bdr2); font-size: .68rem; font-family: monospace;
+  background: var(--sur); color: var(--muted); margin: 0 .15rem;
+}
+
+/* ── Toasts ───────────────────────────────────────────────────────────────── */
+.toasts { position: fixed; bottom: 5.5rem; right: 1.25rem; z-index: 200; display: flex; flex-direction: column; gap: .4rem; }
+.toast {
+  padding: .62rem 1rem; border-radius: 10px;
+  font-size: .81rem; font-weight: 600; display: flex; align-items: center; gap: .6rem;
+  max-width: 340px; animation: tIn .25s ease; pointer-events: all;
+}
+.toast.s { background: rgba(16,185,129,.14); color: var(--low);  border: 1px solid rgba(16,185,129,.3); }
+.toast.i { background: rgba(124,58,237,.14); color: var(--acc2); border: 1px solid rgba(124,58,237,.3); }
+.toast.w { background: rgba(245,158,11,.14); color: var(--med);  border: 1px solid rgba(245,158,11,.3); }
+.undo-btn {
+  margin-left: auto; padding: .18rem .55rem; border-radius: 6px; border: 1px solid currentColor;
+  background: transparent; color: inherit; font-size: .74rem; font-weight: 700;
+  cursor: pointer; flex-shrink: 0;
+}
+.undo-btn:hover { background: rgba(255,255,255,.1); }
+@keyframes tIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 620px) {
+  header { grid-template-columns: auto 1fr auto; }
+  .search-wrap { grid-column: 1/-1; max-width: 100%; }
+  .score-badge, .chart-card { display: none; }
+  .task-card { grid-template-columns: 4px auto 1fr auto; }
+}
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)}
+  40%{transform:translateX(5px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)}
+}
+</style>
+</head>
+<body>
+
+<!-- Confetti canvas -->
+<canvas id="cfx" style="position:fixed;inset:0;pointer-events:none;z-index:998;"></canvas>
+
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📚</div>
+      <div><h1>Smart Study Assistant</h1><p>Rule-based priority engine</p></div>
+    </div>
+
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input class="search-input" id="search-input" type="text" placeholder="Search tasks… (F)" oninput="onSearch(this.value)" />
+      <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+    </div>
+
+    <button class="hdr-btn" onclick="exportJSON()" title="Export tasks as JSON">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>Export
+    </button>
+
+    <button class="btn-add" onclick="openModal()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>Add Task
+    </button>
+  </header>
+
+  <!-- Progress bar -->
+  <div class="progress-section">
+    <div class="progress-info">
+      <span>Overall Progress</span>
+      <span id="prog-txt">0 / 0 tasks complete</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="prog-fill"></div></div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard">
+    <div class="stats">
+      <div class="stat-card"><div class="stat-lbl">Active</div><div class="stat-val c-acc"  id="s-total">0</div></div>
+      <div class="stat-card"><div class="stat-lbl">High</div>  <div class="stat-val c-high" id="s-high">0</div></div>
+      <div class="stat-card"><div class="stat-lbl">Medium</div><div class="stat-val c-med"  id="s-med">0</div></div>
+      <div class="stat-card"><div class="stat-lbl">Done</div>  <div class="stat-val c-done" id="s-done">0</div></div>
+      <div class="stat-card"><div class="stat-lbl">🔥 Streak</div><div class="stat-val c-fire" id="s-streak">0</div></div>
+    </div>
+    <div class="chart-card">
+      <svg id="donut" viewBox="0 0 120 120" width="88" height="88">
+        <circle cx="60" cy="60" r="40" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="20"/>
+        <text x="60" y="65" text-anchor="middle" fill="#a7a9be" font-size="11">No tasks</text>
+      </svg>
+      <div class="chart-legend">
+        <div class="leg"><div class="leg-dot" style="background:var(--high)"></div>High</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--med)"></div>Medium</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--low)"></div>Low</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Urgent banner -->
+  <div id="urgent" class="urgent-banner" style="display:none">
+    <span class="urgent-title">⚠️ Due Very Soon</span>
+    <div class="urgent-chips" id="uchips"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls-row">
+    <div class="tabs">
+      <button class="tab active" onclick="setFilter('active',this)">Active</button>
+      <button class="tab" onclick="setFilter('high',this)">🔴 High</button>
+      <button class="tab" onclick="setFilter('med',this)">🟡 Med</button>
+      <button class="tab" onclick="setFilter('low',this)">🟢 Low</button>
+      <button class="tab" onclick="setFilter('done',this)">✅ Done</button>
+      <button class="tab" onclick="setFilter('all',this)">All</button>
+    </div>
+    <select class="sort-sel" id="sort-sel" onchange="render()">
+      <option value="priority">↓ Priority</option>
+      <option value="deadline">↑ Deadline</option>
+      <option value="importance">↓ Importance</option>
+      <option value="difficulty">↓ Difficulty</option>
+      <option value="name">A–Z Name</option>
+    </select>
+  </div>
+
+  <!-- Task list -->
+  <div id="task-list"></div>
+
+  <div class="kb-hint">
+    <kbd>N</kbd> new task &nbsp;·&nbsp; <kbd>F</kbd> search &nbsp;·&nbsp;
+    <kbd>Space</kbd> pause timer &nbsp;·&nbsp; <kbd>Esc</kbd> close
+  </div>
+
+</div>
+
+<!-- Pomodoro Timer Bar -->
+<div class="timer-bar" id="timer-bar">
+  <div class="timer-info">
+    <div class="tmode-badge work" id="t-mode-badge">Focus</div>
+    <div class="timer-task-name" id="t-task-name">—</div>
+    <div class="timer-pomos" id="t-pomos"></div>
+  </div>
+
+  <div class="timer-svg-wrap">
+    <svg viewBox="0 0 80 80" width="78" height="78">
+      <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="6"/>
+      <circle id="t-circle" cx="40" cy="40" r="32" fill="none"
+        stroke="var(--acc2)" stroke-width="6" stroke-linecap="round"
+        stroke-dasharray="201.06" stroke-dashoffset="0"
+        transform="rotate(-90 40 40)"
+        style="transition:stroke-dashoffset 1s linear"/>
+    </svg>
+    <div class="timer-center">
+      <span id="t-time">25:00</span>
+      <span id="t-lbl">FOCUS</span>
+    </div>
+  </div>
+
+  <div class="timer-btns">
+    <button class="tbtn primary" id="t-pause-btn" onclick="timerPause()" title="Pause / Resume">⏸</button>
+    <button class="tbtn" onclick="timerSkip()"  title="Skip to next phase">⏭</button>
+    <button class="tbtn" onclick="timerStop()"  title="Stop timer">■</button>
+  </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="modal-title">New Task</span>
+      <button class="x-btn" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="fg">
+      <label>Task Name</label>
+      <input type="text" id="inp-name" placeholder="e.g. Revise Chapter 4" maxlength="80"/>
+    </div>
+    <div class="fg">
+      <label>Deadline <span>(days from today · 1–30)</span></label>
+      <input type="number" id="inp-dl" min="1" max="30" value="7" oninput="liveScore()"/>
+    </div>
+    <div class="fg">
+      <label>Difficulty <span>(1 = easy · 10 = very hard)</span></label>
+      <div class="slider-row">
+        <input type="range" id="inp-dif" min="1" max="10" value="5" oninput="syncS('dif');liveScore()"/>
+        <span class="sval" id="v-dif">5</span>
+      </div>
+    </div>
+    <div class="fg">
+      <label>Importance <span>(1 = minor · 10 = critical)</span></label>
+      <div class="slider-row">
+        <input type="range" id="inp-imp" min="1" max="10" value="5" oninput="syncS('imp');liveScore()"/>
+        <span class="sval" id="v-imp">5</span>
+      </div>
+    </div>
+    <div class="fg">
+      <label>Notes <span>(optional)</span></label>
+      <textarea id="inp-notes" placeholder="Extra details, links, reminders…"></textarea>
+    </div>
+
+    <div class="score-preview">
+      <div>
+        <div class="sp-lbl">Priority Score Preview</div>
+        <div class="sp-form">(importance×3) + (difficulty×2) + (10−deadline)</div>
+      </div>
+      <span class="sp-val" id="sp-val">—</span>
+    </div>
+
+    <button class="sub-btn" onclick="submitTask()"><span id="sub-txt">Add Task</span></button>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toasts" id="toasts"></div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let tasks     = [];
+let filter    = 'active';
+let searchQ   = '';
+let editId    = null;
+let trash     = null;
+let trashTmr  = null;
+
+// Pomodoro
+const TMR = {
+  taskId: null, mode: 'work',
+  rem: 25*60, total: 25*60,
+  paused: true, pomos: 0, iv: null,
+};
+const DUR   = { work:25*60, short:5*60, long:15*60 };
+const MLBL  = { work:'Focus', short:'Short Break', long:'Long Break' };
+const MCLR  = { work:'var(--acc2)', short:'var(--low)', long:'var(--blue)' };
+const MSLBL = { work:'FOCUS', short:'BREAK', long:'BREAK' };
+const T_CIRC = 2 * Math.PI * 32; // ≈ 201.06
+
+const MAX_SCORE = (10*3)+(10*2)+(10-1); // 59
+
+// ─── Persistence ─────────────────────────────────────────────────────────────
+function save() { localStorage.setItem('ssa3', JSON.stringify(tasks)); }
+function load() {
+  try {
+    const raw = localStorage.getItem('ssa3')
+             || localStorage.getItem('ssa_tasks_v2')
+             || localStorage.getItem('ssa_tasks');
+    tasks = raw ? JSON.parse(raw) : [];
+    tasks.forEach(t => { if (!('notes' in t)) t.notes = ''; });
+  } catch { tasks = []; }
+}
+
+// ─── Streak ───────────────────────────────────────────────────────────────────
+function getStreak() {
+  try { return JSON.parse(localStorage.getItem('ssa_streak') || '{"date":"","n":0}'); }
+  catch { return { date:'', n:0 }; }
+}
+function bumpStreak() {
+  const today = new Date().toDateString();
+  const s = getStreak();
+  if (s.date === today) return s.n;
+  const yest = new Date(); yest.setDate(yest.getDate()-1);
+  s.n = s.date === yest.toDateString() ? s.n+1 : 1;
+  s.date = today;
+  localStorage.setItem('ssa_streak', JSON.stringify(s));
+  return s.n;
+}
+
+// ─── Priority ─────────────────────────────────────────────────────────────────
+function calc(t) { return (t.importance*3) + (t.difficulty*2) + (10 - t.deadline); }
+function tier(s)  { return s >= 35 ? 'high' : s >= 20 ? 'med' : 'low'; }
+
+// ─── Donut chart ──────────────────────────────────────────────────────────────
+function drawDonut(counts, total) {
+  const svg = document.getElementById('donut');
+  if (!total) {
+    svg.innerHTML = `
+      <circle cx="60" cy="60" r="40" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="20"/>
+      <text x="60" y="65" text-anchor="middle" fill="#a7a9be" font-size="11">No tasks</text>`;
+    return;
+  }
+  const circ = 2*Math.PI*40;
+  const segs = [
+    {n:counts.high, c:'#ef4444'},
+    {n:counts.med,  c:'#f59e0b'},
+    {n:counts.low,  c:'#10b981'},
+  ];
+  let html = `<circle cx="60" cy="60" r="40" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="20"/>`;
+  let cum = 0;
+  segs.forEach(s => {
+    if (!s.n) return;
+    const len = (s.n/total)*circ;
+    html += `<circle cx="60" cy="60" r="40" fill="none" stroke="${s.c}" stroke-width="20"
+      stroke-dasharray="${len} ${circ}" stroke-dashoffset="${-cum}"
+      transform="rotate(-90 60 60)" opacity=".88"/>`;
+    cum += len;
+  });
+  html += `<circle cx="60" cy="60" r="26" fill="var(--sur2)"/>`;
+  html += `<text x="60" y="56" text-anchor="middle" fill="white" font-size="15" font-weight="800">${total}</text>`;
+  html += `<text x="60" y="69" text-anchor="middle" fill="#a7a9be" font-size="8.5">ACTIVE</text>`;
+  svg.innerHTML = html;
+}
+
+// ─── Sort ─────────────────────────────────────────────────────────────────────
+function sorted(list) {
+  const k = document.getElementById('sort-sel')?.value || 'priority';
+  return [...list].sort((a,b) => {
+    if (k==='priority')   return b.priority - a.priority;
+    if (k==='deadline')   return a.deadline - b.deadline;
+    if (k==='importance') return b.importance - a.importance;
+    if (k==='difficulty') return b.difficulty - a.difficulty;
+    if (k==='name')       return a.name.localeCompare(b.name);
+    return 0;
+  });
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  tasks.forEach(t => { t.priority = calc(t); });
+
+  const active = tasks.filter(t => !t.done);
+  const counts = {
+    high: active.filter(t => tier(t.priority)==='high').length,
+    med:  active.filter(t => tier(t.priority)==='med').length,
+    low:  active.filter(t => tier(t.priority)==='low').length,
+  };
+  const doneN = tasks.filter(t => t.done).length;
+  const pct   = tasks.length ? Math.round(doneN/tasks.length*100) : 0;
+
+  document.getElementById('s-total').textContent  = active.length;
+  document.getElementById('s-high').textContent   = counts.high;
+  document.getElementById('s-med').textContent    = counts.med;
+  document.getElementById('s-done').textContent   = doneN;
+  document.getElementById('s-streak').textContent = getStreak().n;
+  document.getElementById('prog-fill').style.width = pct+'%';
+  document.getElementById('prog-txt').textContent  =
+    `${doneN} / ${tasks.length} task${tasks.length!==1?'s':''} complete (${pct}%)`;
+
+  drawDonut(counts, active.length);
+
+  // Urgent banner
+  const urgent = active.filter(t => t.deadline <= 2);
+  const uBanner = document.getElementById('urgent');
+  if (urgent.length) {
+    uBanner.style.display = 'flex';
+    document.getElementById('uchips').innerHTML =
+      urgent.map(t => `<span class="uchip">📅 ${esc(t.name)} — ${t.deadline}d</span>`).join('');
+  } else { uBanner.style.display = 'none'; }
+
+  // Filter
+  let vis = [...tasks];
+  if (filter==='active') vis = vis.filter(t=>!t.done);
+  else if (filter==='done') vis = vis.filter(t=>t.done);
+  else if (filter==='high') vis = vis.filter(t=>!t.done && tier(t.priority)==='high');
+  else if (filter==='med')  vis = vis.filter(t=>!t.done && tier(t.priority)==='med');
+  else if (filter==='low')  vis = vis.filter(t=>!t.done && tier(t.priority)==='low');
+
+  if (searchQ) {
+    const q = searchQ.toLowerCase();
+    vis = vis.filter(t =>
+      t.name.toLowerCase().includes(q) ||
+      (t.notes && t.notes.toLowerCase().includes(q))
+    );
+  }
+
+  const list = document.getElementById('task-list');
+  list.innerHTML = '';
+
+  if (!vis.length) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">${searchQ?'🔍':'📋'}</div>
+      <p>${searchQ?`No tasks match "<strong>${esc(searchQ)}</strong>"`:
+        filter==='done'?'No completed tasks yet.':'No tasks here — hit <strong>Add Task</strong> to begin!'}</p>
+    </div>`;
+    save(); return;
+  }
+
+  const activeSorted = sorted(vis.filter(t=>!t.done));
+  const doneSorted   = vis.filter(t=>t.done);
+
+  let rank = 1;
+  ['high','med','low'].forEach(t => {
+    const grp = activeSorted.filter(x => tier(x.priority)===t);
+    if (!grp.length) return;
+    const lbl = {high:'🔴 High Priority', med:'🟡 Medium Priority', low:'🟢 Low Priority'}[t];
+    appendSec(list, lbl);
+    grp.forEach(task => list.appendChild(makeCard(task, rank++)));
+  });
+
+  if (doneSorted.length) {
+    appendSec(list, '✅ Completed');
+    doneSorted.forEach(task => list.appendChild(makeCard(task, '✓')));
+  }
+
+  save();
+}
+
+function appendSec(list, lbl) {
+  const d = document.createElement('div');
+  d.innerHTML = `<div class="sec-lbl">${lbl}</div>`;
+  list.appendChild(d);
+}
+
+function makeCard(t, rank) {
+  const cl = t.done ? 'low done' : tier(t.priority);
+  const pct = Math.min(100, Math.max(0, Math.round((t.priority/MAX_SCORE)*100)));
+  const focused = TMR.taskId === t.id && TMR.iv;
+
+  const card = document.createElement('div');
+  card.className = `task-card ${cl}`;
+  card.dataset.id = t.id;
+
+  const notesHTML = t.notes
+    ? `<div class="task-notes">📝 ${esc(t.notes.slice(0,90))}${t.notes.length>90?'…':''}</div>`
+    : '';
+  const focusBadge = focused ? `<div class="focus-badge">● IN FOCUS</div>` : '';
+
+  card.innerHTML = `
+    ${focusBadge}
+    <div class="strip"></div>
+    <div class="rank">${rank}</div>
+    <div class="task-body">
+      <div class="task-name">${esc(t.name)}</div>
+      <div class="task-meta">
+        <span>📅 ${t.deadline}d</span>
+        <span>⚡ ${t.difficulty}/10</span>
+        <span>⭐ ${t.importance}/10</span>
+      </div>
+      ${notesHTML}
+      <div class="pbar-track"><div class="pbar-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="score-badge">
+      <span class="score-num">${t.priority}</span>
+      <span class="score-lbl">score</span>
+    </div>
+    <div class="task-actions">
+      ${!t.done?`<button class="ibtn focus-btn${focused?' focus-on':''}" title="Pomodoro focus" onclick="startFocus('${t.id}')">⏱</button>`:''}
+      <button class="ibtn" title="Edit task" onclick="openEdit('${t.id}')">✏</button>
+      <button class="ibtn done-btn${t.done?' ticked':''}" title="${t.done?'Unmark':'Mark done'}" onclick="toggleDone('${t.id}')">
+        ${t.done?'↩':'✓'}
+      </button>
+      <button class="ibtn del-btn" title="Delete" onclick="del('${t.id}')">✕</button>
+    </div>`;
+  return card;
+}
+
+// ─── Task actions ─────────────────────────────────────────────────────────────
+function toggleDone(id) {
+  const t = tasks.find(x=>x.id===id); if (!t) return;
+  t.done = !t.done;
+  if (t.done) { confetti(); bumpStreak(); toast(`"${t.name}" complete! 🎉`,'s'); if(TMR.taskId===id) timerStop(); }
+  else          toast(`"${t.name}" moved back to active`,'i');
+  render();
+}
+
+function del(id) {
+  const idx = tasks.findIndex(x=>x.id===id); if (idx===-1) return;
+  const t = tasks.splice(idx,1)[0];
+  if (trashTmr) clearTimeout(trashTmr);
+  trash = {t, idx};
+  trashTmr = setTimeout(()=>{ trash=null; }, 5500);
+  toast(`"${t.name}" deleted`,'w',true);
+  if (TMR.taskId===id) timerStop();
+  render();
+}
+
+function undoDel() {
+  if (!trash) return;
+  tasks.splice(trash.idx, 0, trash.t);
+  clearTimeout(trashTmr); trash=null;
+  toast('Task restored ↩','s');
+  render();
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+function openModal() {
+  editId = null;
+  document.getElementById('modal-title').textContent = 'New Task';
+  document.getElementById('sub-txt').textContent = 'Add Task';
+  document.getElementById('inp-name').value  = '';
+  document.getElementById('inp-dl').value    = '7';
+  document.getElementById('inp-dif').value   = '5';
+  document.getElementById('inp-imp').value   = '5';
+  document.getElementById('inp-notes').value = '';
+  syncS('dif'); syncS('imp'); liveScore();
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('inp-name').focus(), 60);
+}
+
+function openEdit(id) {
+  const t = tasks.find(x=>x.id===id); if(!t) return;
+  editId = id;
+  document.getElementById('modal-title').textContent = 'Edit Task';
+  document.getElementById('sub-txt').textContent = 'Save Changes';
+  document.getElementById('inp-name').value  = t.name;
+  document.getElementById('inp-dl').value    = t.deadline;
+  document.getElementById('inp-dif').value   = t.difficulty;
+  document.getElementById('inp-imp').value   = t.importance;
+  document.getElementById('inp-notes').value = t.notes||'';
+  syncS('dif'); syncS('imp'); liveScore();
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('inp-name').focus(), 60);
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  editId = null;
+}
+function overlayClick(e) { if (e.target===document.getElementById('overlay')) closeModal(); }
+
+function syncS(f) {
+  document.getElementById(`v-${f}`).textContent = document.getElementById(`inp-${f}`).value;
+}
+function liveScore() {
+  const d   = parseInt(document.getElementById('inp-dl').value)  || 7;
+  const dif = parseInt(document.getElementById('inp-dif').value) || 5;
+  const imp = parseInt(document.getElementById('inp-imp').value) || 5;
+  const s   = (imp*3)+(dif*2)+(10-d);
+  const el  = document.getElementById('sp-val');
+  el.textContent = s;
+  el.style.color = tier(s)==='high'?'var(--high)':tier(s)==='med'?'var(--med)':'var(--low)';
+}
+
+function submitTask() {
+  const name  = document.getElementById('inp-name').value.trim();
+  const dl    = parseInt(document.getElementById('inp-dl').value);
+  const dif   = parseInt(document.getElementById('inp-dif').value);
+  const imp   = parseInt(document.getElementById('inp-imp').value);
+  const notes = document.getElementById('inp-notes').value.trim();
+
+  if (!name)                              { shake('inp-name'); toast('Please enter a task name.','w'); return; }
+  if (isNaN(dl)||dl<1||dl>30)            { shake('inp-dl');   toast('Deadline must be 1–30 days.','w'); return; }
+
+  if (editId) {
+    const t = tasks.find(x=>x.id===editId);
+    if (t) { t.name=name; t.deadline=dl; t.difficulty=dif; t.importance=imp; t.notes=notes; t.priority=calc(t); }
+    toast(`"${name}" updated ✓`,'s');
+  } else {
+    const t = { id:crypto.randomUUID(), name, deadline:dl, difficulty:dif, importance:imp, notes, priority:0, done:false };
+    t.priority = calc(t);
+    tasks.push(t);
+    toast(`"${name}" added — score ${t.priority}`,'s');
+  }
+  closeModal(); render();
+}
+
+// ─── Filter / Search ──────────────────────────────────────────────────────────
+function setFilter(f, btn) {
+  filter = f;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+function onSearch(v) {
+  searchQ = v;
+  document.getElementById('search-clear').classList.toggle('show', !!v);
+  render();
+}
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  onSearch('');
+  document.getElementById('search-input').focus();
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(tasks,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `study_tasks_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Exported as JSON ✓','s');
+}
+
+// ─── Pomodoro timer ───────────────────────────────────────────────────────────
+function startFocus(id) {
+  if (TMR.taskId===id && TMR.iv) { timerStop(); return; }
+  if (TMR.iv) clearInterval(TMR.iv);
+  Object.assign(TMR, { taskId:id, mode:'work', rem:DUR.work, total:DUR.work, paused:false, pomos:0, iv:null });
+  document.getElementById('timer-bar').classList.add('up');
+  timerUI();
+  TMR.iv = setInterval(timerTick, 1000);
+  render();
+}
+
+function timerTick() {
+  if (TMR.paused) return;
+  TMR.rem--;
+  timerUI();
+  if (TMR.rem > 0) return;
+
+  clearInterval(TMR.iv); TMR.iv = null;
+  if (TMR.mode==='work') {
+    TMR.pomos++;
+    TMR.mode  = TMR.pomos%4===0 ? 'long' : 'short';
+    toast(TMR.mode==='long'
+      ? `🍅×${TMR.pomos} Great work! Long break earned.`
+      : `🍅 Focus done! Take a short break.`,'i');
+  } else {
+    TMR.mode = 'work';
+    toast('Break over — time to focus! ⚡','i');
+  }
+  TMR.total = DUR[TMR.mode]; TMR.rem = TMR.total; TMR.paused = true;
+  timerUI();
+}
+
+function timerUI() {
+  const min = String(Math.floor(TMR.rem/60)).padStart(2,'0');
+  const sec = String(TMR.rem%60).padStart(2,'0');
+  document.getElementById('t-time').textContent = `${min}:${sec}`;
+  document.getElementById('t-lbl').textContent  = MSLBL[TMR.mode];
+  document.getElementById('t-circle').style.strokeDashoffset = T_CIRC*(1-TMR.rem/TMR.total);
+  document.getElementById('t-circle').style.stroke = MCLR[TMR.mode];
+  const badge = document.getElementById('t-mode-badge');
+  badge.textContent = MLBL[TMR.mode]; badge.className = `tmode-badge ${TMR.mode}`;
+  const t = tasks.find(x=>x.id===TMR.taskId);
+  document.getElementById('t-task-name').textContent = t?t.name:'—';
+  document.getElementById('t-pomos').textContent = '🍅'.repeat(Math.min(TMR.pomos,8));
+  document.getElementById('t-pause-btn').textContent = TMR.paused ? '▶' : '⏸';
+}
+
+function timerPause() {
+  TMR.paused = !TMR.paused;
+  if (!TMR.paused && !TMR.iv) TMR.iv = setInterval(timerTick,1000);
+  timerUI();
+}
+
+function timerSkip() {
+  if (TMR.iv) clearInterval(TMR.iv); TMR.iv = null;
+  TMR.mode  = TMR.mode==='work' ? (++TMR.pomos%4===0?'long':'short') : 'work';
+  TMR.total = DUR[TMR.mode]; TMR.rem = TMR.total; TMR.paused = true;
+  timerUI();
+}
+
+function timerStop() {
+  if (TMR.iv) clearInterval(TMR.iv);
+  TMR.iv = null; TMR.taskId = null;
+  document.getElementById('timer-bar').classList.remove('up');
+  render();
+}
+
+// ─── Confetti ─────────────────────────────────────────────────────────────────
+function confetti() {
+  const cv = document.getElementById('cfx');
+  cv.width = innerWidth; cv.height = innerHeight;
+  const cx = cv.getContext('2d');
+  const cols = ['#7c3aed','#a855f7','#ef4444','#f59e0b','#10b981','#3b82f6','#ec4899','#facc15'];
+  const ps = Array.from({length:150}, ()=>({
+    x: Math.random()*cv.width, y: -10-Math.random()*60,
+    vx:(Math.random()-.5)*7, vy:Math.random()*3+2,
+    w:Math.random()*11+5, h:Math.random()*6+3,
+    r:Math.random()*360, rv:(Math.random()-.5)*9,
+    c:cols[Math.floor(Math.random()*cols.length)],
+  }));
+  let f=0, max=160;
+  (function draw() {
+    cx.clearRect(0,0,cv.width,cv.height);
+    const a = Math.max(0, 1-f/max);
+    ps.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.vy+=.1; p.r+=p.rv;
+      cx.save(); cx.globalAlpha=a; cx.translate(p.x,p.y); cx.rotate(p.r*Math.PI/180);
+      cx.fillStyle=p.c; cx.fillRect(-p.w/2,-p.h/2,p.w,p.h); cx.restore();
+    });
+    f++;
+    if (f<max) requestAnimationFrame(draw); else cx.clearRect(0,0,cv.width,cv.height);
+  })();
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, type='i', undo=false) {
+  const c  = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const sp = document.createElement('span'); sp.textContent = msg; el.appendChild(sp);
+  if (undo) {
+    const b = document.createElement('button'); b.className='undo-btn'; b.textContent='Undo';
+    b.onclick = ()=>{ undoDel(); el.remove(); }; el.appendChild(b);
+  }
+  c.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; }, 2600);
+  setTimeout(()=>el.remove(), 3000);
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function shake(id) {
+  const el=document.getElementById(id); el.style.animation='none';
+  el.offsetHeight; el.style.animation='shake .35s ease';
+}
+
+// ─── Keyboard shortcuts ───────────────────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+  const typing = ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
+  if (e.key==='Escape') closeModal();
+  if (!typing) {
+    if (e.key==='n'||e.key==='N') openModal();
+    if (e.key==='f'||e.key==='F') document.getElementById('search-input').focus();
+    if (e.key===' ' && TMR.iv) { e.preventDefault(); timerPause(); }
+  }
+  if (e.key==='Enter'
+    && document.getElementById('overlay').classList.contains('open')
+    && !typing) submitTask();
+});
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+load();
+
+if (!tasks.length) {
+  [
+    {name:'Revise Maths Chapter 4',   dl:3,  dif:7, imp:9, notes:'Focus on integration by parts'},
+    {name:'Write History Essay',       dl:7,  dif:6, imp:8, notes:'WWI causes — 1500 words min'},
+    {name:'Physics Past Papers',       dl:2,  dif:8, imp:9, notes:'Last 3 years exam papers'},
+    {name:'Practice Coding (Loops)',   dl:2,  dif:5, imp:7, notes:'LeetCode problems 1–10'},
+    {name:'Read Biology Notes',        dl:14, dif:4, imp:6, notes:''},
+    {name:'Review French Vocabulary',  dl:20, dif:3, imp:5, notes:'Unit 4 & 5 vocab lists'},
+  ].forEach(d=>{
+    const t={id:crypto.randomUUID(),name:d.name,deadline:d.dl,difficulty:d.dif,importance:d.imp,notes:d.notes,priority:0,done:false};
+    t.priority=calc(t); tasks.push(t);
+  });
+}
+
+render();
+</script>
+</body>
+</html>
